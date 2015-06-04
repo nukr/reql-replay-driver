@@ -350,7 +350,6 @@ describe('date and times', () => {
     })
   })
 
-  // timezone
   it('timezone', (done) => {
     let timezone = new Query(r.now().timezone().build())
     co(function * () {
@@ -364,7 +363,6 @@ describe('date and times', () => {
     })
   })
 
-  // during
   it('during', (done) => {
     let during = new Query(r.time(2015, 5, 4, 'Z').during(r.time(2015, 4, 4, 'Z'), r.time(2015, 5, 6, 'Z')).build())
     co(function * () {
@@ -378,7 +376,6 @@ describe('date and times', () => {
     })
   })
 
-  // date
   it('date', (done) => {
     let date = new Query(r.now().date().hours().build())
     co(function * () {
@@ -392,28 +389,150 @@ describe('date and times', () => {
     })
   })
 
-  // timeOfDay
-  // year
-  // month
-  // day
-  // dayOfWeek
-  // dayOfYear
-
-  // hours
-  it('hours', (done) => {
-    let hours = new Query(r.now().hours().build())
+  it('timeOfDay', (done) => {
+    let timeOfDay = new Query(r.time(2015, 4, 4, 'Z').timeOfDay().build())
     co(function * () {
       try {
-        let result = yield hours.run()
-        expect(result).to.be.equal(new Date().getUTCHours())
+        let result = yield timeOfDay.run()
+        expect(result).to.be.a('number')
         done()
       } catch (e) {
         done(e)
       }
     })
   })
-  // minutes
-  // seconds
-  // toISO8601
-  // toEpochTime
+
+  it('year', (done) => {
+    let year = new Query(r.time(2015, 4, 4, 'Z').year().build())
+    co(function * () {
+      try {
+        let result = yield year.run()
+        expect(result).to.be.equal(2015)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('month', (done) => {
+    let month = new Query(r.time(2015, 4, 4, 'Z').month().build())
+    co(function * () {
+      try {
+        let result = yield month.run()
+        expect(result).to.be.equal(4)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('day', (done) => {
+    let day = new Query(r.time(2015, 4, 4, 'Z').day().build())
+    co(function * () {
+      try {
+        let result = yield day.run()
+        expect(result).to.be.equal(4)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('dayOfWeek', (done) => {
+    let dayOfWeek = new Query(r.time(2015, 4, 4, 'Z').dayOfWeek().build())
+    co(function * () {
+      try {
+        let result = yield dayOfWeek.run()
+        expect(result).to.be.equal(6)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('dayOfYear', (done) => {
+    let dayOfYear = new Query(r.time(2015, 4, 4, 'Z').dayOfYear().build())
+    co(function * () {
+      try {
+        let result = yield dayOfYear.run()
+        expect(result).to.be.equal(94)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('hours', (done) => {
+    let hours = new Query(r.time(2015, 5, 5, 12, 12, 12, 'Z').hours().build())
+    co(function * () {
+      try {
+        let result = yield hours.run()
+        expect(result).to.be.equal(12)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('minutes', (done) => {
+    let minutes = new Query(r.time(2015, 5, 5, 12, 12, 12, 'Z').minutes().build())
+    co(function * () {
+      try {
+        let result = yield minutes.run()
+        expect(result).to.be.equal(12)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('seconds', (done) => {
+    let seconds = new Query(r.time(2015, 5, 5, 12, 12, 12, 'Z').seconds().build())
+    co(function * () {
+      try {
+        let result = yield seconds.run()
+        expect(result).to.be.equal(12)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('toISO8601', (done) => {
+    let toISO8601 = new Query(r.time(2015, 5, 5, 12, 12, 12, 'Z').toISO8601().build())
+    co(function * () {
+      try {
+        let result = yield toISO8601.run()
+        let conn = yield r.connect({host: '192.168.100.5', port: 28015})
+        let rResult = yield r.time(2015, 5, 5, 12, 12, 12, 'Z').toISO8601().run(conn)
+        expect(result).to.be.equal(rResult)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('toEpochTime', (done) => {
+    let toEpochTime = new Query(r.time(2015, 5, 5, 12, 12, 12, 'Z').toEpochTime().build())
+    co(function * () {
+      try {
+        let result = yield toEpochTime.run()
+        let conn = yield r.connect({host: '192.168.100.5', port: 28015})
+        let rResult = yield r.time(2015, 5, 5, 12, 12, 12, 'Z').toEpochTime().run(conn)
+        expect(result).to.be.equal(rResult)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
 })

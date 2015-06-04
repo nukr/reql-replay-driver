@@ -99,10 +99,30 @@ class Query {
         return this.timezone(term[1])
       case termTypes.DURING:
         return this.during(term[1])
-      case termTypes.HOURS:
-        return this.hours(term[1])
       case termTypes.DATE:
         return this.date(term[1])
+      case termTypes.TIME_OF_DAY:
+        return this.timeOfDay(term[1])
+      case termTypes.YEAR:
+        return this.year(term[1])
+      case termTypes.MONTH:
+        return this.month(term[1])
+      case termTypes.DAY:
+        return this.day(term[1])
+      case termTypes.DAY_OF_WEEK:
+        return this.dayOfWeek(term[1])
+      case termTypes.DAY_OF_YEAR:
+        return this.dayOfYear(term[1])
+      case termTypes.HOURS:
+        return this.hours(term[1])
+      case termTypes.MINUTES:
+        return this.minutes(term[1])
+      case termTypes.SECONDS:
+        return this.seconds(term[1])
+      case termTypes.TO_ISO8601:
+        return this.toISO8601(term[1])
+      case termTypes.TO_EPOCH_TIME:
+        return this.toEpochTime(term[1])
       default:
         throw new Error.ReqlRuntimeError("Unknown term")
     }
@@ -324,9 +344,59 @@ class Query {
     return var1.date()
   }
 
+  timeOfDay (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.timeOfDay()
+  }
+
+  year (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.year()
+  }
+
+  month (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.month()
+  }
+
+  day (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.day()
+  }
+
+  dayOfWeek (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.dayOfWeek()
+  }
+
+  dayOfYear (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.dayOfYear()
+  }
+
   hours(args) {
     let var1 = this.evaluate(args.shift())
     return var1.hours()
+  }
+
+  minutes(args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.minutes()
+  }
+
+  seconds(args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.seconds()
+  }
+
+  toISO8601 (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.toISO8601()
+  }
+
+  toEpochTime (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.toEpochTime()
   }
 }
 
