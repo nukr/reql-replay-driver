@@ -1,0 +1,44 @@
+{
+  "name": "reql-parser",
+  "version": "0.0.1",
+  "description": "",
+  "main": "parser.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nukr/reql-parser.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nukr/reql-parser/issues"
+  },
+  "homepage": "https://github.com/nukr/reql-parser#readme",
+  "dependencies": {
+    "co": "^4.5.4",
+    "debug": "^2.2.0",
+    "lodash": "^3.9.3",
+    "require-dir": "^0.3.0",
+    "rethinkdb": "^2.0.0-1",
+    "rethinkdbdash": "^2.0.11"
+  },
+  "devDependencies": {
+    "babel": "^5.4.7",
+    "babel-runtime": "^5.4.7",
+    "chai": "^2.3.0",
+    "gulp": "^3.8.11",
+    "gulp-nodemon": "^2.0.3",
+    "isparta": "^3.0.3",
+    "mocha": "^2.2.5",
+    "parallelshell": "^1.1.1",
+    "rimraf": "^2.3.4",
+    "watch": "^0.16.0"
+  },
+  "scripts": {
+    "clean": "rimraf dist/*",
+    "nodemon": "nodemon --exec 'babel-node' ./src/parser.js",
+    "coverage": "babel-node --stage 0 node_modules/.bin/isparta cover --report text --report html node_modules/.bin/_mocha -- --reporter spec",
+    "test:watch": "npm run test -- -w --timeout 15000",
+    "test": "mocha --compilers js:babel/register",
+    "start": "npm run test:watch"
+  }
+}
