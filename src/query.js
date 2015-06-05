@@ -1,14 +1,12 @@
 import rethinkdbdash from 'rethinkdbdash'
 import protodef from './protodef'
 import debug from 'debug'
+import config from '../config.js'
 
 let log = debug('query')
 
 let termTypes = protodef.Term.TermType
-let r = rethinkdbdash({
-  host: '192.168.100.5',
-  port: 28015
-})
+let r = rethinkdbdash(config.rethinkdb)
 
 class Query {
   constructor (query) {
@@ -123,6 +121,24 @@ class Query {
         return this.toISO8601(term[1])
       case termTypes.TO_EPOCH_TIME:
         return this.toEpochTime(term[1])
+      case termTypes.CONCAT_MAP:
+        return this.concatMap(term[1])
+      case termTypes.ORDER_BY:
+        return this.orderBy(term[1])
+      case termTypes.SKIP:
+        return this.skip(term[1])
+      case termTypes.SLICE:
+        return this.slice(term[1])
+      case termTypes.NTH:
+        return this.nth(term[1])
+      case termTypes.OFFSETS_OF:
+        return this.offsetsOf(term[1])
+      case termTypes.IS_EMPTY:
+        return this.isEmpty(term[1])
+      case termTypes.UNION:
+        return this.union(term[1])
+      case termTypes.SAMPLE:
+        return this.sample(term[1])
       default:
         throw new Error.ReqlRuntimeError("Unknown term")
     }
@@ -165,6 +181,18 @@ class Query {
     let predicate = this.evaluate(args[1])
     log('map()')
     return sequence.map(predicate)
+  }
+
+  concatMap (args) {
+    let sequence = this.evaluate(args.shift())
+    let predicate = this.evaluate(...args)
+    log('concatMap()')
+    return sequence.concatMap(predicate)
+  }
+
+  orderBy (args) {
+    let sequence = this.evaluate(args.shift())
+    return sequence.orderBy(...args)
   }
 
   add (args) {
@@ -212,7 +240,7 @@ class Query {
   }
 
   func (args) {
-    this.fnArgs = this.evaluate(args[0])
+    this.fnArgs = args[0][1].map((arg) => `var_${arg}`)
     this.funcBody = args[1]
     let vars = ''
     this.fnArgs.forEach(arg => {
@@ -229,8 +257,15 @@ class Query {
   }
 
   makeArray (args) {
+    args = args.map(arg => {
+      if (arg[0] === 2 && Array.isArray(arg[1])) {
+        return this.evaluate(arg)
+      } else {
+        return arg
+      }
+    })
     log(`makeArray ${args}`)
-    return args.map((arg) => `var_${arg}`)
+    return r(args)
   }
 
   bracket (args) {
@@ -242,11 +277,6 @@ class Query {
   varId (args) {
     log(`${args}`)
     return this[`var_${args}`]
-  }
-
-  limit (args) {
-    let sequence = this.evaluate(args[0])
-    return sequence.limit(args[1])
   }
 
   withFields (args) {
@@ -398,6 +428,48 @@ class Query {
     let var1 = this.evaluate(args.shift())
     return var1.toEpochTime()
   }
+
+  skip (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.skip(...args)
+  }
+
+  limit (args) {
+    let sequence = this.evaluate(args.shift())
+    return sequence.limit(...args)
+  }
+
+  slice (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.slice(...args)
+  }
+
+  nth (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.nth(...args)
+  }
+
+  offsetsOf (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.offsetsOf(...args)
+  }
+
+  isEmpty (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.isEmpty()
+  }
+
+  union (args) {
+    let var1 = this.evaluate(args.shift())
+    let var2s = args.map(arg => this.evaluate(arg))
+    return var1.union(...var2s)
+  }
+
+  sample (args) {
+    let var1 = this.evaluate(args.shift())
+    return var1.sample(...args)
+  }
+
 }
 
 export default Query

@@ -3,108 +3,14 @@ import {expect} from 'chai'
 import Query from '../src/query'
 import r from 'rethinkdb'
 import co from 'co'
+import fs from 'fs'
 
-describe('build query from array', () => {
-  it("simple query r.db('test').table('bills')", () => {
-    let query = new Query(r.db('test').table('bills').build())
-    let promise = query.run()
-    promise.then((result) => {
-      expect(result.length).to.be.equal(35177)
-    })
-  })
-
-  it("filter with objet", () => {
-    let query = new Query(r.db('test').table('bills').filter({billNo: 13799}).build())
-    let promise = query.run()
-    promise.then((result) => {
-      expect(result[0].id).to.be.equal('0006e572-2f24-4d79-87c3-ea6213caba06')
-    })
-  })
-
-  it("filter with function", () => {
-    let query = new Query(
-      r.db('test').table('bills').filter((bill) => {
-        return bill('id').eq('0006e572-2f24-4d79-87c3-ea6213caba06')
-      }).build()
-    )
-    let promise = query.run()
-    promise.then((result) => {
-      expect(result[0].id).to.be.equal('0006e572-2f24-4d79-87c3-ea6213caba06')
-    })
-  })
-
-  it("filter with function", () => {
-    let query = new Query(
-      r.db('test').table('bills').filter((bill) => {
-        return bill('id').eq('0006e572-2f24-4d79-87c3-ea6213caba06')
-      }).build()
-    )
-    let promise = query.run()
-    promise.then((result) => {
-      expect(result[0].id).to.be.equal('0006e572-2f24-4d79-87c3-ea6213caba06')
-    })
-  })
-
-  it('map reduce add', (done) => {
-    let query = new Query(
-      r.db('test').table('bills')
-        .map(function(bill){
-          return 1
-        })
-        .reduce(function (left, right){
-          return left.add(right)
-        }).build()
-    )
-    co(function * () {
-      try {
-        let result = yield query.run()
-        expect(result).to.be.equal(35177)
-        done()
-      } catch (e) {
-        done(e)
-      }
-    })
-  })
-
-  it('withFields', (done) => {
-    let query = new Query(r.db('test').table('bills').withFields('billNo', 'creator').limit(1).build())
-    co(function * () {
-      try {
-        let result = yield query.run()
-        expect(Object.keys(result[0])).to.be.eql(['billNo', 'creator'])
-        done()
-      } catch (e) {
-        done(e)
-      }
-    })
-  })
-
-  it('count', (done) => {
-    let query = new Query(r.db('test').table('bills').count().build())
-    co(function * () {
-      try {
-        let result = yield query.run()
-        expect(result).to.be.equal(35177)
-        done()
-      } catch (e) {
-        done(e)
-      }
-    })
-  })
-
-  // it('expr', (done) => {
-  //   let query = new Query(r.expr(12).build())
-  //   co(function * () {
-  //     try {
-  //       let result = yield query.run()
-  //       expect(result).to.be.equal(14)
-  //       done()
-  //     } catch (e) {
-  //       done(e)
-  //     }
-  //   })
-  // })
-})
+// describe('selecting data', () => {
+//   it('get')
+//   it('getAll')
+//   it('between')
+//   it('filter')
+// })
 
 describe('arithmetics', () => {
   it('add', (done) => {
@@ -534,5 +440,155 @@ describe('date and times', () => {
         done(e)
       }
     })
+  })
+})
+
+describe('transformation', () => {
+  it('map', (done) => {
+    let query = new Query(r([1, 2, 3, 4, 5]).map((el) => {
+      return el.add(2)
+    }).build())
+    co(function * () {
+      try {
+        let result = yield query.run()
+        expect(result).to.be.eql([3, 4, 5, 6, 7])
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('map reduce add', (done) => {
+    let query = new Query(
+      r.db('driverTest').table('sequence')
+        .map(function(row){
+          return 1
+        })
+        .reduce(function (left, right){
+          return left.add(right)
+        }).build()
+    )
+    co(function * () {
+        let result = yield query.run()
+        expect(result).to.be.equal(100)
+        done()
+    }).catch(done)
+  })
+
+  it('withFields', (done) => {
+    let query = new Query(r.db('driverTest').table('sequence').withFields('num').nth(0).build())
+    co(function * () {
+        let result = yield query.run()
+        expect(Object.keys(result)).to.be.eql(['num'])
+        done()
+    }).catch(done)
+  })
+
+  it('concatMap', (done) => {
+    let query = new Query(r([[1, 2, 3, 4, 5], [2, 3, 4, 5, 6], [3, 4, 5, 6, 7]]).concatMap((el) => {
+      return el
+    }).build())
+    co(function * () {
+      let result = yield query.run()
+      expect(result).to.be.eql([1, 2, 3, 4, 5, 2, 3, 4, 5, 6, 3, 4, 5, 6, 7])
+      done()
+    }).catch(done)
+  })
+
+  // orderBy
+
+  it('skip', (done) => {
+    let query = new Query(r.db('driverTest').table('sequence').orderBy('num').skip(50).nth(0).build())
+    co(function * () {
+      let result = yield query.run()
+      expect(result.num).to.be.equal(50)
+      done()
+    }).catch(done)
+  })
+
+  // limit
+  it('limit', (done) => {
+    let query = new Query(r.db('driverTest').table('sequence').limit(1).build())
+    co(function * () {
+      let result = yield query.run()
+      expect(result.length).to.be.equal(1)
+      done()
+    }).catch(done)
+  })
+
+  // slice
+  it('slice', (done) => {
+    let arr100 = Array.apply(null, Array(100)).map((e, index) => index)
+    let query = new Query(r(arr100).slice(0, 20).build())
+    co(function * () {
+      let result = yield query.run()
+      expect(result.length).to.be.equal(20)
+      done()
+    }).catch(done)
+  })
+
+  // nth
+  it('nth', (done) => {
+    let arr100 = Array.apply(null, Array(100)).map((e, index) => index)
+    let query = new Query(r(arr100).nth(20).build())
+    co(function * () {
+      let result = yield query.run()
+      expect(result).to.be.equal(20)
+      done()
+    }).catch(done)
+  })
+
+  // offsetsOf
+  it('offsetsOf', (done) => {
+    let query = new Query(r(['a', 'b', 'c']).offsetsOf('c').nth(0).build())
+    co(function * () {
+      let result = yield query.run()
+      expect(result).to.be.equal(2)
+      done()
+    }).catch(done)
+  })
+
+  // isEmpty
+  it('isEmpty', (done) => {
+    let query = new Query(r.db('driverTest').table('sequence').isEmpty().build())
+    co(function * () {
+      let result = yield query.run()
+      expect(result).to.be.false
+      done()
+    }).catch(done)
+  })
+
+  // union
+  // it('isEmpty', (done) => {
+  //   let query = new Query(r.db('test').table('bills').isEmpty().build())
+  //   co(function * () {
+  //     let result = yield query.run()
+  //     expect(result).to.be.false
+  //     done()
+  //   }).catch(done)
+  // })
+  // sample
+  // it('isEmpty', (done) => {
+  //   let query = new Query(r.db('test').table('bills').isEmpty().build())
+  //   co(function * () {
+  //     let result = yield query.run()
+  //     expect(result).to.be.false
+  //     done()
+  //   }).catch(done)
+  // })
+
+})
+
+describe('misc', () => {
+  it('func', (done) => {
+    let query = new Query(r.db('driverTest').table('sequence').filter((row) => {
+      return row('num').lt(50)
+    }).count().build())
+    co(function * () {
+      let result = yield query.run()
+      expect(result).to.be.equal(50)
+      done()
+    }).catch(done)
   })
 })
