@@ -5,12 +5,8 @@ import r from 'rethinkdb'
 import co from 'co'
 import fs from 'fs'
 
-// describe('selecting data', () => {
-//   it('get')
-//   it('getAll')
-//   it('between')
-//   it('filter')
-// })
+let seqTable = r.db('driverTest').table('sequence')
+
 
 describe('arithmetics', () => {
   it('add', (done) => {
@@ -569,15 +565,379 @@ describe('transformation', () => {
   //   }).catch(done)
   // })
   // sample
-  // it('isEmpty', (done) => {
-  //   let query = new Query(r.db('test').table('bills').isEmpty().build())
+  it('sample', (done) => {
+    let query = new Query(r.db('driverTest').table('sequence').sample(5).build())
+    co(function * () {
+      let result = yield query.run()
+      expect(result.length).to.be.equal(5)
+      expect(result[0].num).to.be.a('number')
+      done()
+    }).catch(done)
+  })
+})
+
+describe('aggregation', () => {
+  it('group', (done) => {
+    let query = new Query(r.db('driverTest').table('sequence').group('name').build())
+    let groupInfoQuery = new Query(r.db('driverTest').table('sequence').group('name').info().build())
+    co(function * () {
+      let result = yield query.run()
+      expect(result[0].group).to.be.exist
+      expect(result[0].reduction).to.be.an('array')
+      let groupInfo = yield groupInfoQuery.run()
+      expect(groupInfo.type).to.be.equal('GROUPED_STREAM')
+      done()
+    }).catch(done)
+  })
+
+  it('ungroup', (done) => {
+    let ungroupQuery = new Query(r.db('driverTest').table('sequence').group('name').ungroup().info().build())
+    co(function * () {
+      let ungroup = yield ungroupQuery.run()
+      expect(ungroup.type).to.be.equal('ARRAY')
+      done()
+    }).catch(done)
+  })
+
+  it('reduce', (done) => {
+    let reduceQuery = new Query(r.db('driverTest').table('sequence').map((seq) => {
+      return 1
+    }).reduce((left, right) => {
+      return left.add(right)
+    }).build())
+    co(function * () {
+      let reduce = yield reduceQuery.run()
+      expect(reduce).to.be.equal(100)
+      done()
+    }).catch(done)
+  })
+
+  it('count', (done) => {
+    let countQuery = new Query(r.db('driverTest').table('sequence').count().build())
+    co(function * () {
+      let count = yield countQuery.run()
+      expect(count).to.be.equal(100)
+      done()
+    }).catch(done)
+  })
+
+  it('sum', (done) => {
+    let sumQuery = new Query(r.expr([3, 5, 7]).sum().build())
+    co(function * () {
+      let sum = yield sumQuery.run()
+      expect(sum).to.be.equal(15)
+      done()
+    }).catch(done)
+  })
+
+  it('avg', (done) => {
+    let avgQuery = new Query(r.expr([3, 5, 7]).avg().build())
+    co(function * () {
+      let avg = yield avgQuery.run()
+      expect(avg).to.be.equal(5)
+      done()
+    }).catch(done)
+  })
+
+  it('min', (done) => {
+    let minQuery = new Query(r.expr([3, 5, 7]).min().build())
+    co(function * () {
+      let min = yield minQuery.run()
+      expect(min).to.be.equal(3)
+      done()
+    }).catch(done)
+  })
+
+  it('max', (done) => {
+    let maxQuery = new Query(r.expr([3, 5, 7]).max().build())
+    co(function * () {
+      let max = yield maxQuery.run()
+      expect(max).to.be.equal(7)
+      done()
+    }).catch(done)
+  })
+
+  it('distinct', (done) => {
+    let distinctQuery = new Query(r.expr([{name: 'wei'}, {name: 'sunny'}, {name: 'wei'}]).distinct().count().build())
+    co(function * () {
+      let distinct = yield distinctQuery.run()
+      expect(distinct).to.be.equal(2)
+      done()
+    }).catch(done)
+  })
+
+  it('contains', (done) => {
+    let containsQuery = new Query(r.expr([2, 3, 4, 5]).contains(3).build())
+    co(function * () {
+      let contains = yield containsQuery.run()
+      expect(contains).to.be.true
+      done()
+    }).catch(done)
+  })
+})
+
+describe('document manipulation', () => {
+  it('row', (done) => {
+    let rowQuery = new Query(r.db('driverTest').table('sequence').filter(r.row('num').ge(50)).count().build())
+    co(function * () {
+      let row = yield rowQuery.run()
+      expect(row).to.be.equal(50)
+      done()
+    }).catch(done)
+  })
+
+  it('pluck', (done) => {
+    let pluckQuery = new Query(seqTable.pluck('num', 'name').nth(0).build())
+    co(function * () {
+      let pluckResult = yield pluckQuery.run()
+      expect(pluckResult).to.have.all.keys('name', 'num')
+      done()
+    }).catch(done)
+  })
+
+  it('without', (done) => {
+    let withoutQuery = new Query(seqTable.without('num').nth(0).build())
+    co(function * () {
+      let withoutResult = yield withoutQuery.run()
+      expect(withoutResult).to.have.all.keys('name', 'id')
+      done()
+    }).catch(done)
+  })
+
+  it('merge', (done) => {
+    let mergeQuery = new Query(seqTable.filter({num: 1}).nth(0).merge({test: '123'}).build())
+    co(function * () {
+      let mergeResult = yield mergeQuery.run()
+      expect(mergeResult).to.be.all.keys('name', 'num', 'test', 'id')
+      done()
+    }).catch(done)
+  })
+
+  it('append', (done) => {
+    let appendQuery = new Query(seqTable.filter({num: 1}).coerceTo('array').append('test').build())
+    co(function * () {
+      let appendResult = yield appendQuery.run()
+      expect(appendResult[1]).to.be.equal('test')
+      done()
+    }).catch(done)
+  })
+
+  it('prepend', (done) => {
+    let prependQuery = new Query(seqTable.filter({num: 1}).coerceTo('array').prepend('test').build())
+    co(function * () {
+      let prependResult = yield prependQuery.run()
+      expect(prependResult[0]).to.be.equal('test')
+      done()
+    }).catch(done)
+  })
+
+  it('difference', (done) => {
+    let differenceQuery = new Query(r.expr([1, 2, 3, 4]).difference([1]).build())
+    co(function * () {
+      let differenceResult = yield differenceQuery.run()
+      expect(differenceResult).to.be.eql([2, 3, 4])
+      done()
+    }).catch(done)
+  })
+
+  it('setInsert', (done) => {
+    let setInsertQuery1 = new Query(r.expr([1, 2, 3, 4]).setInsert(1).build())
+    let setInsertQuery2 = new Query(r.expr([1, 2, 3, 4]).setInsert(5).build())
+    co(function * () {
+      let setInsertResult1 = yield setInsertQuery1.run()
+      expect(setInsertResult1).to.be.eql([1, 2, 3, 4])
+      let setInsertResult2 = yield setInsertQuery2.run()
+      expect(setInsertResult2).to.be.eql([1, 2, 3, 4, 5])
+      done()
+    }).catch(done)
+  })
+
+  it('setUnion', (done) => {
+    let setUnionQuery = new Query(r.expr([1, 2, 3, 4]).setUnion([1, 2, 3, 4, 5]).build())
+    co(function * () {
+      let setUnionResult = yield setUnionQuery.run()
+      expect(setUnionResult).to.be.eql([1, 2, 3, 4, 5])
+      done()
+    }).catch(done)
+  })
+
+  it('setIntersection', (done) => {
+    let setIntersectionQuery = new Query(r.expr([1, 2, 3, 4]).setIntersection([1, 5, 6, 7]).build())
+    co(function * () {
+      let setIntersectionResult = yield setIntersectionQuery.run()
+      expect(setIntersectionResult).to.be.eql([1])
+      done()
+    }).catch(done)
+  })
+
+  it('setDifference', (done) => {
+    let setDifferenceQuery = new Query(r.expr([1, 2, 3, 4]).setDifference([1, 2, 3]).build())
+    co(function * () {
+      let setDifferenceResult = yield setDifferenceQuery.run()
+      expect(setDifferenceResult).to.be.eql([4])
+      done()
+    }).catch(done)
+  })
+
+  it('()', (done) => {
+    co(function * () {
+      done()
+    }).catch(done)
+  })
+
+  it('getField', (done) => {
+    let getFieldQuery = new Query(seqTable.getField('num').build())
+    co(function * () {
+      let getFieldResult = yield getFieldQuery.run()
+      expect(getFieldResult).to.have.length(100)
+      expect(getFieldResult).to.be.an('array')
+      done()
+    }).catch(done)
+  })
+
+  it('hasFields', (done) => {
+    let hasFieldsQuery = new Query(seqTable.hasFields(['num']).build())
+    co(function * () {
+      let hasFieldsResult = yield hasFieldsQuery.run()
+      expect(hasFieldsResult).to.have.length(100)
+      done()
+    }).catch(done)
+  })
+
+  it('insertAt', (done) => {
+    let insertAtQuery = new Query(seqTable.coerceTo('array').insertAt(1, 'qq').build())
+    co(function * () {
+      let insertResult = yield insertAtQuery.run()
+      expect(insertResult[1]).to.be.equal('qq')
+      done()
+    }).catch(done)
+  })
+
+  it('spliceAt', (done) => {
+    let spliceAtQuery = new Query(r.expr([1, 2, 3, 4]).spliceAt(1, [5, 6]).build())
+    co(function * () {
+      let spliceResult = yield spliceAtQuery.run()
+      expect(spliceResult).to.be.eql([1, 5, 6, 2, 3, 4])
+      done()
+    }).catch(done)
+  })
+
+  it('deleteAt', (done) => {
+    let deleteAtQuery = new Query(r.expr([1, 2, 3, 4]).deleteAt(0).build())
+    co(function * () {
+      let deleteAtResult = yield deleteAtQuery.run()
+      expect(deleteAtResult).to.be.eql([2, 3, 4])
+      done()
+    }).catch(done)
+  })
+
+  it('changeAt', (done) => {
+    let changeAtQuery = new Query(r.expr([1, 2, 3, 4]).changeAt(0, 2).build())
+    co(function * () {
+      let changeAtResult = yield changeAtQuery.run()
+      expect(changeAtResult).to.be.eql([2, 2, 3, 4])
+      done()
+    }).catch(done)
+  })
+
+  it('keys', (done) => {
+    let keysQuery = new Query(seqTable.nth(0).keys().build())
+    co(function * () {
+      let keysResult = yield keysQuery.run()
+      expect(keysResult).to.be.eql(['id', 'name', 'num'])
+      done()
+    }).catch(done)
+  })
+
+  // it('literal', (done) => {
+  //   let literalQuery = new Query(seqTable.sample(1).nth(0).update({data: r.literal({aa: 'bb'})}).build())
   //   co(function * () {
-  //     let result = yield query.run()
-  //     expect(result).to.be.false
+  //     let literalResult = yield literalQuery.run()
   //     done()
   //   }).catch(done)
   // })
 
+  it('object', (done) => {
+    let objectQuery = new Query(r.object('key1', 11111, 'key2', 22222).build())
+    co(function * () {
+      let objectResult = yield objectQuery.run()
+      expect(objectResult).to.be.eql({key1: 11111, key2: 22222})
+      done()
+    }).catch(done)
+  })
+})
+
+describe('writing data', () => {
+  it('delete', (done) => {
+    let deleteQuery = new Query(r.db('driverTest').table('insert').delete().build())
+    co(function * () {
+      let deleteResult = yield deleteQuery.run()
+      expect(deleteResult).to.include.keys('deleted')
+      expect(deleteResult.deleted).to.be.equal(1)
+      done()
+    }).catch(done)
+  })
+  it('insert', (done) => {
+    let insertQuery = new Query(r.db('driverTest').table('insert').insert({test: 'gg'}).build())
+    co(function * () {
+      let insertResult = yield insertQuery.run()
+      expect(insertResult).to.include.keys('inserted')
+      expect(insertResult.inserted).to.be.equal(1)
+      done()
+    }).catch(done)
+  })
+  it('update', (done) => {
+    let updateQuery = new Query(r.db('driverTest').table('insert').nth(0).update({test: 'qq'}).build())
+    co(function * () {
+      let updateResult = yield updateQuery.run()
+      expect(updateResult).to.include.keys('inserted')
+      expect(updateResult.replaced).to.be.equal(1)
+      done()
+    }).catch(done)
+  })
+  it('replace', (done) => {
+    done()
+  })
+})
+
+describe('selecting data', () => {
+  it('get', (done) => {
+    done()
+  })
+  it('getAll', (done) => {
+    done()
+  })
+  it('between', (done) => {
+    done()
+  })
+  it('filter', (done) => {
+    done()
+  })
+})
+
+describe('control structures', () => {
+  it('info', (done) => {
+    let db = new Query(r.db('driverTest').info().build())
+    let table = new Query(r.db('driverTest').table('sequence').info().build())
+    co(function * () {
+      let dbResult = yield db.run()
+      expect(dbResult.type).to.be.equal('DB')
+      expect(dbResult.name).to.be.equal('driverTest')
+      let tableResult = yield table.run()
+      expect(tableResult.type).to.be.equal('TABLE')
+      expect(tableResult.name).to.be.equal('sequence')
+      done()
+    }).catch(done)
+  })
+
+  it('coerceTo', (done) => {
+    let coerceToQuery = new Query(r.db('driverTest').table('sequence').coerceTo('array').info().build())
+    co(function * () {
+      let coerceToResult = yield coerceToQuery.run()
+      expect(coerceToResult.type).to.be.equal('ARRAY')
+      done()
+    }).catch(done)
+  })
 })
 
 describe('misc', () => {
