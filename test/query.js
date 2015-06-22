@@ -6,12 +6,12 @@ import co from 'co'
 import fs from 'fs'
 import config from '../config'
 
-let seqTable = r.db('driverTest').table('sequence')
+let seqTable = r.db(config.rethinkdb.db).table('sequence')
 
 
 describe('writing data', () => {
   it('insert', (done) => {
-    let insertQuery = new Query(r.db('driverTest').table('insert').insert({test: 'gg'}).build())
+    let insertQuery = new Query(r.db(config.rethinkdb.db).table('insert').insert({test: 'gg'}).build())
     co(function * () {
       let insertResult = yield insertQuery.run()
       expect(insertResult).to.include.keys('inserted')
@@ -20,7 +20,7 @@ describe('writing data', () => {
     }).catch(done)
   })
   it('update', (done) => {
-    let updateQuery = new Query(r.db('driverTest').table('insert').nth(0).update({test: 'qq'}).build())
+    let updateQuery = new Query(r.db(config.rethinkdb.db).table('insert').nth(0).update({test: 'qq'}).build())
     co(function * () {
       let updateResult = yield updateQuery.run()
       expect(updateResult).to.include.keys('inserted')
@@ -32,7 +32,7 @@ describe('writing data', () => {
     done()
   })
   it('delete', (done) => {
-    let deleteQuery = new Query(r.db('driverTest').table('insert').delete().build())
+    let deleteQuery = new Query(r.db(config.rethinkdb.db).table('insert').delete().build())
     co(function * () {
       let deleteResult = yield deleteQuery.run()
       expect(deleteResult).to.include.keys('deleted')
@@ -44,22 +44,66 @@ describe('writing data', () => {
 
 describe('selecting data', () => {
   it('get', (done) => {
-    let firstQuery = new Query(r.db('driverTest').table('sequence').nth(0).build())
     co(function * () {
+      let firstQuery = new Query(r.db(config.rethinkdb.db).table('sequence').filter({num: 1}).nth(0).build())
       let firstResult = yield firstQuery.run()
-      let getQuery = new Query(r.db('driverTest').table('sequence').get(firstResult.id).build())
+      let getQuery = new Query(r.db(config.rethinkdb.db).table('sequence').get(firstResult.id).build())
       let getResult = yield getQuery.run()
+      expect(getResult.num).to.be.equal(1)
       done()
     }).catch(done)
   })
   it('getAll', (done) => {
-    done()
+    co(function * () {
+      let getAllQuery = new Query(r.db(config.rethinkdb.db).table('sequence').getAll('stan', 'qq', {index: 'name'}).build())
+      let getAllResult = yield getAllQuery.run()
+      done()
+    }).catch(done)
   })
-  it('between', (done) => {
-    done()
+  it('between primary key', (done) => {
+    co(function * () {
+      let betweenQuery = new Query(r.db(config.rethinkdb.db).table('sequence').between(10, 20).build())
+      let betweenResult = yield betweenQuery.run()
+      done()
+    }).catch(done)
+  })
+  it('between specify key', (done) => {
+    co(function * () {
+      let betweenQuery = new Query(r.db(config.rethinkdb.db).table('sequence').between(10, 20, {index: 'name'}).build())
+      let betweenResult = yield betweenQuery.run()
+      done()
+    }).catch(done)
   })
   it('filter', (done) => {
-    done()
+    co(function * () {
+      let filterQuery = new Query(r.db(config.rethinkdb.db).table('sequence').filter({num: 1}).nth(0).build())
+      let filterResult = yield filterQuery.run()
+      expect(filterResult.num).to.be.equal(1)
+      done()
+    }).catch(done)
+  })
+})
+
+describe('joins', () => {
+  it('innerJoin', (done) => {
+    co(function * () {
+      done()
+    }).catch(done)
+  })
+  it('outerJson', (done) => {
+    co(function * () {
+      done()
+    }).catch(done)
+  })
+  it('eqJson', (done) => {
+    co(function * () {
+      done()
+    }).catch(done)
+  })
+  it('zip', (done) => {
+    co(function * () {
+      done()
+    }).catch(done)
   })
 })
 
@@ -511,7 +555,7 @@ describe('transformation', () => {
 
   it('map reduce add', (done) => {
     let query = new Query(
-      r.db('driverTest').table('sequence')
+      r.db(config.rethinkdb.db).table('sequence')
         .map(function(row){
           return 1
         })
@@ -527,7 +571,7 @@ describe('transformation', () => {
   })
 
   it('withFields', (done) => {
-    let query = new Query(r.db('driverTest').table('sequence').withFields('num').nth(0).build())
+    let query = new Query(r.db(config.rethinkdb.db).table('sequence').withFields('num').nth(0).build())
     co(function * () {
         let result = yield query.run()
         expect(Object.keys(result)).to.be.eql(['num'])
@@ -549,7 +593,7 @@ describe('transformation', () => {
   // orderBy
 
   it('skip', (done) => {
-    let query = new Query(r.db('driverTest').table('sequence').orderBy('num').skip(50).nth(0).build())
+    let query = new Query(r.db(config.rethinkdb.db).table('sequence').orderBy('num').skip(50).nth(0).build())
     co(function * () {
       let result = yield query.run()
       expect(result.num).to.be.equal(50)
@@ -559,7 +603,7 @@ describe('transformation', () => {
 
   // limit
   it('limit', (done) => {
-    let query = new Query(r.db('driverTest').table('sequence').limit(1).build())
+    let query = new Query(r.db(config.rethinkdb.db).table('sequence').limit(1).build())
     co(function * () {
       let result = yield query.run()
       expect(result.length).to.be.equal(1)
@@ -601,7 +645,7 @@ describe('transformation', () => {
 
   // isEmpty
   it('isEmpty', (done) => {
-    let query = new Query(r.db('driverTest').table('sequence').isEmpty().build())
+    let query = new Query(r.db(config.rethinkdb.db).table('sequence').isEmpty().build())
     co(function * () {
       let result = yield query.run()
       expect(result).to.be.false
@@ -620,7 +664,7 @@ describe('transformation', () => {
   // })
   // sample
   it('sample', (done) => {
-    let query = new Query(r.db('driverTest').table('sequence').sample(5).build())
+    let query = new Query(r.db(config.rethinkdb.db).table('sequence').sample(5).build())
     co(function * () {
       let result = yield query.run()
       expect(result.length).to.be.equal(5)
@@ -632,8 +676,8 @@ describe('transformation', () => {
 
 describe('aggregation', () => {
   it('group', (done) => {
-    let query = new Query(r.db('driverTest').table('sequence').group('name').build())
-    let groupInfoQuery = new Query(r.db('driverTest').table('sequence').group('name').info().build())
+    let query = new Query(r.db(config.rethinkdb.db).table('sequence').group('name').build())
+    let groupInfoQuery = new Query(r.db(config.rethinkdb.db).table('sequence').group('name').info().build())
     co(function * () {
       let result = yield query.run()
       expect(result[0].group).to.be.exist
@@ -645,7 +689,7 @@ describe('aggregation', () => {
   })
 
   it('ungroup', (done) => {
-    let ungroupQuery = new Query(r.db('driverTest').table('sequence').group('name').ungroup().info().build())
+    let ungroupQuery = new Query(r.db(config.rethinkdb.db).table('sequence').group('name').ungroup().info().build())
     co(function * () {
       let ungroup = yield ungroupQuery.run()
       expect(ungroup.type).to.be.equal('ARRAY')
@@ -654,7 +698,7 @@ describe('aggregation', () => {
   })
 
   it('reduce', (done) => {
-    let reduceQuery = new Query(r.db('driverTest').table('sequence').map((seq) => {
+    let reduceQuery = new Query(r.db(config.rethinkdb.db).table('sequence').map((seq) => {
       return 1
     }).reduce((left, right) => {
       return left.add(right)
@@ -667,7 +711,7 @@ describe('aggregation', () => {
   })
 
   it('count', (done) => {
-    let countQuery = new Query(r.db('driverTest').table('sequence').count().build())
+    let countQuery = new Query(r.db(config.rethinkdb.db).table('sequence').count().build())
     co(function * () {
       let count = yield countQuery.run()
       expect(count).to.be.equal(100)
@@ -732,7 +776,7 @@ describe('aggregation', () => {
 
 describe('document manipulation', () => {
   it('row', (done) => {
-    let rowQuery = new Query(r.db('driverTest').table('sequence').filter(r.row('num').ge(50)).count().build())
+    let rowQuery = new Query(r.db(config.rethinkdb.db).table('sequence').filter(r.row('num').ge(50)).count().build())
     co(function * () {
       let row = yield rowQuery.run()
       expect(row).to.be.equal(50)
@@ -923,13 +967,94 @@ describe('document manipulation', () => {
 
 
 describe('control structures', () => {
+  it('args', (done) => {
+    co(function * () {
+      let argsQuery = new Query(r.args([1, 2, 3, 4, 5]).build())
+      let argsResult = yield argsQuery.run()
+      expect(argsResult).to.be.eql([1, 2, 3, 4, 5])
+      done()
+    }).catch(done)
+  })
+
+  it('binary', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('do', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('branch', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('forEach', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('range', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('error', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('default', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('expr', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('typeOf', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('json', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('toJsonString', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('toJSON', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('http', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+  it('uuid', (done) => {
+    co(function * () {
+      done()
+    })
+  })
+
+
   it('info', (done) => {
-    let db = new Query(r.db('driverTest').info().build())
-    let table = new Query(r.db('driverTest').table('sequence').info().build())
+    let db = new Query(r.db(config.rethinkdb.db).info().build())
+    let table = new Query(r.db(config.rethinkdb.db).table('sequence').info().build())
     co(function * () {
       let dbResult = yield db.run()
       expect(dbResult.type).to.be.equal('DB')
-      expect(dbResult.name).to.be.equal('driverTest')
+      expect(dbResult.name).to.be.equal(config.rethinkdb.db)
       let tableResult = yield table.run()
       expect(tableResult.type).to.be.equal('TABLE')
       expect(tableResult.name).to.be.equal('sequence')
@@ -938,7 +1063,7 @@ describe('control structures', () => {
   })
 
   it('coerceTo', (done) => {
-    let coerceToQuery = new Query(r.db('driverTest').table('sequence').coerceTo('array').info().build())
+    let coerceToQuery = new Query(r.db(config.rethinkdb.db).table('sequence').coerceTo('array').info().build())
     co(function * () {
       let coerceToResult = yield coerceToQuery.run()
       expect(coerceToResult.type).to.be.equal('ARRAY')
@@ -978,7 +1103,7 @@ describe('string manipulation', () => {
 
 describe('misc', () => {
   it('func', (done) => {
-    let query = new Query(r.db('driverTest').table('sequence').filter((row) => {
+    let query = new Query(r.db(config.rethinkdb.db).table('sequence').filter((row) => {
       return row('num').lt(50)
     }).count().build())
     co(function * () {
