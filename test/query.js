@@ -4,11 +4,67 @@ import Query from '../src/query'
 import r from 'rethinkdb'
 import co from 'co'
 import fs from 'fs'
+import config from '../config'
 
 let seqTable = r.db('driverTest').table('sequence')
 
 
-describe('arithmetics', () => {
+describe('writing data', () => {
+  it('insert', (done) => {
+    let insertQuery = new Query(r.db('driverTest').table('insert').insert({test: 'gg'}).build())
+    co(function * () {
+      let insertResult = yield insertQuery.run()
+      expect(insertResult).to.include.keys('inserted')
+      expect(insertResult.inserted).to.be.equal(1)
+      done()
+    }).catch(done)
+  })
+  it('update', (done) => {
+    let updateQuery = new Query(r.db('driverTest').table('insert').nth(0).update({test: 'qq'}).build())
+    co(function * () {
+      let updateResult = yield updateQuery.run()
+      expect(updateResult).to.include.keys('inserted')
+      expect(updateResult.replaced).to.be.equal(1)
+      done()
+    }).catch(done)
+  })
+  it('replace', (done) => {
+    done()
+  })
+  it('delete', (done) => {
+    let deleteQuery = new Query(r.db('driverTest').table('insert').delete().build())
+    co(function * () {
+      let deleteResult = yield deleteQuery.run()
+      expect(deleteResult).to.include.keys('deleted')
+      expect(deleteResult.deleted).to.be.equal(1)
+      done()
+    }).catch(done)
+  })
+})
+
+describe('selecting data', () => {
+  it('get', (done) => {
+    let firstQuery = new Query(r.db('driverTest').table('sequence').nth(0).build())
+    co(function * () {
+      let firstResult = yield firstQuery.run()
+      let getQuery = new Query(r.db('driverTest').table('sequence').get(firstResult.id).build())
+      let getResult = yield getQuery.run()
+      done()
+    }).catch(done)
+  })
+  it('getAll', (done) => {
+    done()
+  })
+  it('between', (done) => {
+    done()
+  })
+  it('filter', (done) => {
+    done()
+  })
+})
+
+
+describe('math and logic', () => {
   it('add', (done) => {
     let add = new Query(r.expr(12).add(2).build())
     co(function * () {
@@ -57,9 +113,7 @@ describe('arithmetics', () => {
       }
     })
   })
-})
 
-describe('logic', () => {
   it('and', (done) => {
     let and = new Query(r.expr(true).and(true).build())
     co(function * () {
@@ -413,7 +467,7 @@ describe('date and times', () => {
     co(function * () {
       try {
         let result = yield toISO8601.run()
-        let conn = yield r.connect({host: '192.168.100.5', port: 28015})
+        let conn = yield r.connect({host: config.rethinkdb.host, port: config.rethinkdb.port})
         let rResult = yield r.time(2015, 5, 5, 12, 12, 12, 'Z').toISO8601().run(conn)
         expect(result).to.be.equal(rResult)
         done()
@@ -428,7 +482,7 @@ describe('date and times', () => {
     co(function * () {
       try {
         let result = yield toEpochTime.run()
-        let conn = yield r.connect({host: '192.168.100.5', port: 28015})
+        let conn = yield r.connect({host: config.rethinkdb.host, port: config.rethinkdb.port})
         let rResult = yield r.time(2015, 5, 5, 12, 12, 12, 'Z').toEpochTime().run(conn)
         expect(result).to.be.equal(rResult)
         done()
@@ -867,53 +921,6 @@ describe('document manipulation', () => {
   })
 })
 
-describe('writing data', () => {
-  it('delete', (done) => {
-    let deleteQuery = new Query(r.db('driverTest').table('insert').delete().build())
-    co(function * () {
-      let deleteResult = yield deleteQuery.run()
-      expect(deleteResult).to.include.keys('deleted')
-      expect(deleteResult.deleted).to.be.equal(1)
-      done()
-    }).catch(done)
-  })
-  it('insert', (done) => {
-    let insertQuery = new Query(r.db('driverTest').table('insert').insert({test: 'gg'}).build())
-    co(function * () {
-      let insertResult = yield insertQuery.run()
-      expect(insertResult).to.include.keys('inserted')
-      expect(insertResult.inserted).to.be.equal(1)
-      done()
-    }).catch(done)
-  })
-  it('update', (done) => {
-    let updateQuery = new Query(r.db('driverTest').table('insert').nth(0).update({test: 'qq'}).build())
-    co(function * () {
-      let updateResult = yield updateQuery.run()
-      expect(updateResult).to.include.keys('inserted')
-      expect(updateResult.replaced).to.be.equal(1)
-      done()
-    }).catch(done)
-  })
-  it('replace', (done) => {
-    done()
-  })
-})
-
-describe('selecting data', () => {
-  it('get', (done) => {
-    done()
-  })
-  it('getAll', (done) => {
-    done()
-  })
-  it('between', (done) => {
-    done()
-  })
-  it('filter', (done) => {
-    done()
-  })
-})
 
 describe('control structures', () => {
   it('info', (done) => {
@@ -935,6 +942,35 @@ describe('control structures', () => {
     co(function * () {
       let coerceToResult = yield coerceToQuery.run()
       expect(coerceToResult.type).to.be.equal('ARRAY')
+      done()
+    }).catch(done)
+  })
+})
+
+describe('string manipulation', () => {
+  it('match', (done) => {
+    co(function * () {
+      done()
+    }).catch(done)
+  })
+  it('split', (done) => {
+    co(function * () {
+      done()
+    }).catch(done)
+  })
+  it('upcase', (done) => {
+    let upcaseQuery = new Query(r.expr('hello world').upcase().build())
+    co(function * () {
+      let upcaseResult = yield upcaseQuery.run()
+      expect(upcaseResult).to.be.equal('HELLO WORLD')
+      done()
+    }).catch(done)
+  })
+  it('downcase', (done) => {
+    let downcaseQuery = new Query(r.expr('HELLO WORLD').downcase().build())
+    co(function * () {
+      let downcaseResult = yield downcaseQuery.run()
+      expect(downcaseResult).to.be.equal('hello world')
       done()
     }).catch(done)
   })

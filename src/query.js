@@ -213,6 +213,14 @@ class Query {
         return this.getAll(term[1], internalOptions)
       case termTypes.COERCE_TO:
         return this.coerceTo(term[1], internalOptions)
+      case termTypes.MATCH:
+        return this.match(term[1], internalOptions)
+      case termTypes.SPLIT:
+        return this.split(term[1], internalOptions)
+      case termTypes.UPCASE:
+        return this.upcase(term[1], internalOptions)
+      case termTypes.DOWNCASE:
+        return this.downcase(term[1], internalOptions)
       default:
         throw new Error.ReqlRuntimeError("Unknown term")
     }
@@ -727,6 +735,26 @@ class Query {
   coerceTo (args, options) {
     let sequence = this.evaluate(args.shift(), options)
     return sequence.coerceTo(...args)
+  }
+
+  match (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.match(...args)
+  }
+
+  split (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.split(...args)
+  }
+
+  upcase (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.upcase(...args)
+  }
+
+  downcase (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.downcase(...args)
   }
 
 }
