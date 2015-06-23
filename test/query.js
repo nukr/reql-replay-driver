@@ -5,7 +5,9 @@ import r from 'rethinkdb'
 import co from 'co'
 import fs from 'fs'
 import config from '../config'
+import Debug from 'debug'
 
+let debug = Debug('reql:test')
 let seqTable = r.db(config.rethinkdb.db).table('sequence')
 
 
@@ -976,75 +978,86 @@ describe('control structures', () => {
     }).catch(done)
   })
 
-  it('binary', (done) => {
-    co(function * () {
-      done()
-    })
-  })
   it('do', (done) => {
     co(function * () {
+      let doQuery = new Query(r.db(config.rethinkdb.db).table('sequence').orderBy('num', {index: 'num'}).nth(0).do((seq) => {
+        return seq('num').add(100)
+      }).build())
+      let doResult = yield doQuery.run()
+      expect(doResult).to.be.equal(100)
       done()
-    })
+    }).catch(done)
   })
   it('branch', (done) => {
     co(function * () {
+      let branchQuery = new Query(r.db('reql_driver_test').table('sequence').map(
+        r.branch(
+          r.row('num').gt(50),
+          r.row('name').add('bigger'),
+          r.row('name').add('smaller')
+        )
+      ).build())
+      let branchResult = yield branchQuery.run()
       done()
-    })
+    }).catch(done)
   })
   it('forEach', (done) => {
     co(function * () {
       done()
-    })
+    }).catch(done)
   })
   it('range', (done) => {
     co(function * () {
+      let rangeQuery = new Query(r.range(4).build())
+      let rangeResult = yield rangeQuery.run()
+      expect(rangeResult).to.be.eql([0, 1, 2, 3])
       done()
-    })
+    }).catch(done)
   })
   it('error', (done) => {
     co(function * () {
       done()
-    })
+    }).catch(done)
   })
   it('default', (done) => {
     co(function * () {
       done()
-    })
+    }).catch(done)
   })
   it('expr', (done) => {
     co(function * () {
       done()
-    })
+    }).catch(done)
   })
   it('typeOf', (done) => {
     co(function * () {
       done()
-    })
+    }).catch(done)
   })
   it('json', (done) => {
     co(function * () {
       done()
-    })
+    }).catch(done)
   })
   it('toJsonString', (done) => {
     co(function * () {
       done()
-    })
+    }).catch(done)
   })
   it('toJSON', (done) => {
     co(function * () {
       done()
-    })
+    }).catch(done)
   })
   it('http', (done) => {
     co(function * () {
       done()
-    })
+    }).catch(done)
   })
   it('uuid', (done) => {
     co(function * () {
       done()
-    })
+    }).catch(done)
   })
 
 
@@ -1109,6 +1122,19 @@ describe('misc', () => {
     co(function * () {
       let result = yield query.run()
       expect(result).to.be.equal(50)
+      done()
+    }).catch(done)
+  })
+})
+
+describe('joins', () => {
+  it('innerJoin', (done) => {
+    co(function * () {
+      done()
+    }).catch(done)
+  })
+  it('outerJoin', (done) => {
+    co(function * () {
       done()
     }).catch(done)
   })

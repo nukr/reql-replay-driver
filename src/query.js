@@ -1,9 +1,9 @@
 import rethinkdbdash from 'rethinkdbdash'
 import protodef from './protodef'
-import debug from 'debug'
+import Debug from 'debug'
 import config from '../config.js'
 
-let log = debug('query')
+let debug = Debug('reql:query')
 
 let termTypes = protodef.Term.TermType
 let r = rethinkdbdash(config.rethinkdb)
@@ -18,7 +18,7 @@ class Query {
   run (query) {
     query = query || this.query
     let result = this.evaluate(query)
-    log('result', result)
+    debug('result', result)
     return result.run()
   }
 
@@ -39,6 +39,8 @@ class Query {
         return this.filter(term[1], internalOptions)
       case termTypes.FUNC: // 69
         return this.func(term[1], internalOptions)
+      case termTypes.FUNCALL: // 64
+        return this.funCall(term[1], internalOptions)
       case termTypes.MAKE_ARRAY: // 2
         return this.makeArray(term[1], internalOptions)
       case termTypes.VAR: // 10
@@ -225,6 +227,28 @@ class Query {
         return this.between(term[1], term[2], internalOptions)
       case termTypes.ARGS:
         return this.args(term[1], internalOptions)
+      case termTypes.BRANCH:
+        return this.branch(term[1], internalOptions)
+      case termTypes.RANGE:
+        return this.range(term[1], internalOptions)
+      case termTypes.ERROR:
+        return this.error(term[1], internalOptions)
+      case termTypes.DEFAULT:
+        return this.default(term[1], internalOptions)
+      case termTypes.TYPE_OF:
+        return this.typeOf(term[1], internalOptions)
+      case termTypes.JSON:
+        return this.json(term[1], internalOptions)
+      case termTypes.TO_JSON_STRING:
+        return this.toJsonString(term[1], internalOptions)
+      case termTypes.HTTP:
+        return this.http(term[1], internalOptions)
+      case termTypes.UUID:
+        return this.uuid(term[1], internalOptions)
+      case termTypes.FOR_EACH:
+        return this.foreach(term[1], internalOptions)
+      case termTypes.INNER_JOIN:
+        return this.innerJoin(term[1], internalOptions)
       default:
         throw new Error.ReqlRuntimeError("Unknown term")
     }
@@ -232,14 +256,12 @@ class Query {
 
   db (args, options) {
     let dbName = args[0]
-    log('db')
     return r.db(dbName)
   }
 
   table (args, options) {
     let db = this.evaluate(args[0], options)
     let tableName = args[1]
-    log('table')
     return db.table(tableName)
   }
 
@@ -251,28 +273,24 @@ class Query {
     } else {
       predicate = args[1]
     }
-    log('filter')
     return sequence.filter(predicate)
   }
 
   reduce (args, options) {
     let sequence = this.evaluate(args[0], options)
     let predicate = this.evaluate(args[1], options)
-    log('reduce()')
     return sequence.reduce(predicate)
   }
 
   map (args, options) {
     let sequence = this.evaluate(args[0], options)
     let predicate = this.evaluate(args[1], options)
-    log('map()')
     return sequence.map(predicate)
   }
 
   concatMap (args, options) {
     let sequence = this.evaluate(args.shift(), options)
     let predicate = this.evaluate(args[0], options)
-    log('concatMap()')
     return sequence.concatMap(predicate)
   }
 
@@ -284,35 +302,30 @@ class Query {
   add (args, options) {
     let var1 = this.evaluate(args[0], options)
     let var2 = this.evaluate(args[1], options)
-    log('add()', var1, var2)
     return var1.add(var2)
   }
 
   sub (args, options) {
     let var1 = this.evaluate(args[0], options)
     let var2 = this.evaluate(args[1], options)
-    log('sub()', var1, var2)
     return var1.sub(var2)
   }
 
   mul (args, options) {
     let var1 = this.evaluate(args[0], options)
     let var2 = this.evaluate(args[1], options)
-    log('mul()', var1, var2)
     return var1.mul(var2)
   }
 
   div (args, options) {
     let var1 = this.evaluate(args[0], options)
     let var2 = this.evaluate(args[1], options)
-    log('div()', var1, var2)
     return var1.div(var2)
   }
 
   mod (args, options) {
     let var1 = this.evaluate(args[0], options)
     let var2 = this.evaluate(args[1], options)
-    log('mod()', var1, var2)
     return var1.mod(var2)
   }
 
@@ -345,6 +358,11 @@ class Query {
     ).bind(this)
   }
 
+  funCall (args, options) {
+    let sequence = this.evaluate(args[1], options)
+    return sequence.do(this.evaluate(args[0]))
+  }
+
   makeArray (args, options) {
     args = args.map(arg => {
       if (arg[0] === 2 && Array.isArray(arg[1])) {
@@ -353,18 +371,15 @@ class Query {
         return arg
       }
     })
-    log(`makeArray ${args}`)
     return r(args, options)
   }
 
   bracket (args, options) {
     let sequence = this.evaluate(args[0], options)
-    log(`.(${args[1]})`)
     return sequence(args[1])
   }
 
   varId (args, options) {
-    log(`${args}`)
     return this[`var_${args}`]
   }
 
@@ -702,37 +717,37 @@ class Query {
   }
 
   insert (args, options) {
-    let table = this.evaluate(args.shift())
+    let table = this.evaluate(args.shift(), options)
     return table.insert(...args)
   }
 
   update (args, options) {
-    let table = this.evaluate(args.shift())
+    let table = this.evaluate(args.shift(), options)
     return table.update(...args)
   }
 
   delete (args, options) {
-    let table = this.evaluate(args.shift())
+    let table = this.evaluate(args.shift(), options)
     return table.delete()
   }
 
   replace (args, options) {
-    let table = this.evaluate(args.shift())
+    let table = this.evaluate(args.shift(), options)
     return table.replace(...args)
   }
 
   get (args, options) {
-    let table = this.evaluate(args.shift())
+    let table = this.evaluate(args.shift(), options)
     return table.get(...args)
   }
 
   getAll (args, index, options) {
-    let table = this.evaluate(args.shift())
+    let table = this.evaluate(args.shift(), options)
     return table.getAll(...args, index)
   }
 
   between (args, optionalArgs, options) {
-    let table = this.evaluate(args.shift())
+    let table = this.evaluate(args.shift(), options)
     return table.between(...args, optionalArgs)
   }
 
@@ -763,6 +778,56 @@ class Query {
 
   args (args, options) {
     return r.args(args[0][1])
+  }
+
+  branch (args, options) {
+    return r.branch(
+      this.evaluate(args.shift(), options),
+      this.evaluate(args.shift(), options),
+      this.evaluate(args.shift(), options)
+    )
+  }
+
+  range (args, options) {
+    return r.range(args.shift())
+  }
+
+  error (args, options) {
+    return r.error(args.shift())
+  }
+
+  default (args, options) {
+    return this.evaluate(args.shift(), options).default(args.shift())
+  }
+
+  typeOf (args, options) {
+    return this.evaluate(args.shift(), options).typeOf(args.shift())
+  }
+
+  json (args, options) {
+    return r.json(args.shift())
+  }
+
+  toJsonString (args, options) {
+    return this.evaluate(args.shift(), options).toJsonString()
+  }
+
+  http (args, options) {
+    return r.http(...args)
+  }
+
+  uuid (args, options) {
+    return r.uuid()
+  }
+
+  foreach (args, options) {
+    let sequence = this.evaluate(args[0], options)
+    let predicate = this.evaluate(args[1], options)
+    return sequence.forEach(predicate)
+  }
+
+  innerJoin (args, options) {
+    console.log(JSON.stringify(args))
   }
 
 }

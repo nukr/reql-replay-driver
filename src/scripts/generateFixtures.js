@@ -46,6 +46,11 @@ co(function * () {
   yield r.db(config.rethinkdb.db).table('sequence').indexWait('name')
   console.timeEnd('indexWait name')
 
+  yield r.db(config.rethinkdb.db).table('sequence').indexCreate('num')
+  console.time('indexWait num')
+  yield r.db(config.rethinkdb.db).table('sequence').indexWait('num')
+  console.timeEnd('indexWait num')
+
   r.getPoolMaster().drain()
   console.timeEnd('generateFixutures')
 })
