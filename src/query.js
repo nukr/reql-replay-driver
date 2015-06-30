@@ -4,15 +4,19 @@ import Debug from 'debug'
 import config from '../config.js'
 
 let debug = Debug('reql:query')
-
 let termTypes = protodef.Term.TermType
-let r = rethinkdbdash(config.rethinkdb)
+let r = null
 
 class Query {
   constructor (query) {
+    if (r === null) throw Error('db not setting yet please set by Query.db(dbOptions)')
     this.query = query
     this.fnId = 0
     this.fnArgs = {}
+  }
+
+  static db (dbOptions) {
+    r = rethinkdbdash(dbOptions)
   }
 
   run (query) {

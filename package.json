@@ -1,18 +1,18 @@
 {
-  "name": "reql-parser",
+  "name": "reql-replay-driver",
   "version": "0.0.1",
   "description": "",
   "main": "parser.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nukr/reql-parser.git"
+    "url": "git+https://github.com/nukr/reql-replay-driver.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "nukr",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/nukr/reql-parser/issues"
+    "url": "https://github.com/nukr/reql-replay-driver/issues"
   },
-  "homepage": "https://github.com/nukr/reql-parser#readme",
+  "homepage": "https://github.com/nukr/reql-replay-driver#readme",
   "dependencies": {
     "co": "^4.5.4",
     "debug": "^2.2.0",
@@ -24,7 +24,7 @@
   "devDependencies": {
     "babel": "^5.4.7",
     "babel-runtime": "^5.4.7",
-    "chai": "^2.3.0",
+    "chai": "^3.0.0",
     "gulp": "^3.8.11",
     "gulp-nodemon": "^2.0.3",
     "isparta": "^3.0.3",
@@ -38,6 +38,7 @@
     "nodemon": "nodemon --exec 'babel-node' ./src/parser.js",
     "coverage": "babel-node --stage 0 node_modules/.bin/isparta cover --report text --report html node_modules/.bin/_mocha -- --reporter spec",
     "test:watch": "mocha --compilers js:babel/register -w --timeout 15000",
-    "test": "babel-node --stage 0 ./src/scripts/generateFixtures.js && npm run test:watch"
+    "test": "babel-node --stage 0 ./src/scripts/generateFixtures.js && npm run test:watch",
+    "prepublish": "babel -d lib/ src/"
   }
 }

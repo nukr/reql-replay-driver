@@ -10,6 +10,9 @@ import Debug from 'debug'
 let debug = Debug('reql:test')
 let seqTable = r.db(config.rethinkdb.db).table('sequence')
 
+before(() => {
+  Query.db(config.rethinkdb)
+})
 
 describe('writing data', () => {
   it('insert', (done) => {

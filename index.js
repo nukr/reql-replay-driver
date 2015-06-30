@@ -1,3 +1,1 @@
-import query from './src/query'
-
-export default query
+module.exports = require('./lib/query')
