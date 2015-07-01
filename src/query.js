@@ -8,22 +8,23 @@ let termTypes = protodef.Term.TermType
 let r = null
 
 class Query {
-  constructor (query) {
-    if (r === null) throw Error('db not setting yet please set by Query.db(dbOptions)')
+  constructor (query, dbName) {
+    if (r === null) throw Error('db not setting yet please set by Query.options(dbOptions)')
+    this.dbName = dbName || 'test'
     this.query = query
     this.fnId = 0
     this.fnArgs = {}
   }
 
-  static db (dbOptions) {
+  static options (dbOptions) {
     r = rethinkdbdash(dbOptions)
   }
 
   run (query) {
     query = query || this.query
     let result = this.evaluate(query)
-    debug('result', result)
     return result.run()
+    debug('result', result)
   }
 
   evaluate (term, internalOptions) {
@@ -254,13 +255,12 @@ class Query {
       case termTypes.INNER_JOIN:
         return this.innerJoin(term[1], internalOptions)
       default:
-        throw new Error.ReqlRuntimeError("Unknown term")
+        throw new Error('unknown term')
     }
   }
 
   db (args, options) {
-    let dbName = args[0]
-    return r.db(dbName)
+    return r.db(this.dbName)
   }
 
   table (args, options) {
