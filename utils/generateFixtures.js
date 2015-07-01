@@ -1,6 +1,6 @@
 import rethinkdbdash from 'rethinkdbdash'
 import co from 'co'
-import config from '../../config.js'
+import config from '../config'
 console.log(config)
 
 const r = rethinkdbdash({host: config.rethinkdb.host, port: config.rethinkdb.port})

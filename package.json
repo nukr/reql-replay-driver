@@ -39,7 +39,7 @@
     "coverage": "babel-node --stage 0 node_modules/.bin/isparta cover --report text --report html node_modules/.bin/_mocha -- --reporter spec",
     "nodemon": "nodemon --exec 'babel-node' ./src/parser.js",
     "prepublish": "babel -d lib/ src/",
-    "test": "babel-node --stage 0 ./src/scripts/generateFixtures.js && npm run test:watch",
+    "test": "babel-node --stage 0 ./utils/generateFixtures.js && npm run test:watch",
     "test:watch": "mocha --require utils/mochaBabel.js -w --timeout 15000"
   }
 }

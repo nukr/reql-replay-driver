@@ -253,7 +253,7 @@ class Query {
       case termTypes.FOR_EACH:
         return this.foreach(term[1], internalOptions)
       case termTypes.INNER_JOIN:
-        return this.innerJoin(term[1], internalOptions)
+        throw new Error('illegal command innerJoin')
       default:
         throw new Error('unknown term')
     }
@@ -828,10 +828,6 @@ class Query {
     let sequence = this.evaluate(args[0], options)
     let predicate = this.evaluate(args[1], options)
     return sequence.forEach(predicate)
-  }
-
-  innerJoin (args, options) {
-    console.log(JSON.stringify(args))
   }
 
 }
