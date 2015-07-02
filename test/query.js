@@ -1145,9 +1145,9 @@ describe('can not access function', () => {
 
 describe('joins', () => {
   it('innerJoin', (done) => {
-    co(function * () {
+    async () => {
       done()
-    }).catch(done)
+    }().catch(done)
   })
   it('outerJoin', (done) => {
     co(function * () {

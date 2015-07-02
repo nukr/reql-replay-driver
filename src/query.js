@@ -253,7 +253,7 @@ class Query {
       case termTypes.FOR_EACH:
         return this.foreach(term[1], internalOptions)
       case termTypes.INNER_JOIN:
-        throw new Error('illegal command innerJoin')
+        throw new Error('illegal command [innerJoin]')
       default:
         throw new Error('unknown term')
     }
