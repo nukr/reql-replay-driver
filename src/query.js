@@ -1,5 +1,6 @@
 import rethinkdbdash from 'rethinkdbdash'
 import protodef from './protodef'
+import reverseProtodef from './reverse-protodef'
 import Debug from 'debug'
 import config from '../config.js'
 
@@ -36,8 +37,26 @@ class Query {
 
     let termType = term[0]
     switch (termType) {
+      /**
+       * Writing data
+       */
+      case termTypes.INSERT:
+        return this.insert(term[1], internalOptions)
+      case termTypes.UPDATE:
+        return this.update(term[1], internalOptions)
+      case termTypes.REPLACE:
+        return this.replace(term[1], internalOptions)
+      case termTypes.DELETE:
+        return this.delete(term[1], internalOptions)
+      case termTypes.SYNC:
+        return this.sync(term[1], internalOptions)
+
+      /**
+       * Selecting data
+       */
       case termTypes.DB: // 14
         return this.db(term[1], internalOptions)
+
       case termTypes.TABLE: // 15
         return this.table(term[1], internalOptions)
       case termTypes.FILTER: // 39
@@ -206,14 +225,6 @@ class Query {
         return this.literal(term[1], internalOptions)
       case termTypes.OBJECT:
         return this.object(term[1], internalOptions)
-      case termTypes.INSERT:
-        return this.insert(term[1], internalOptions)
-      case termTypes.UPDATE:
-        return this.update(term[1], internalOptions)
-      case termTypes.DELETE:
-        return this.delete(term[1], internalOptions)
-      case termTypes.REPLACE:
-        return this.replace(term[1], internalOptions)
       case termTypes.GET:
         return this.get(term[1], internalOptions)
       case termTypes.GET_ALL:
@@ -252,13 +263,50 @@ class Query {
         return this.uuid(term[1], internalOptions)
       case termTypes.FOR_EACH:
         return this.foreach(term[1], internalOptions)
+      case termTypes.ZIP:
+        return this.zip(term[1], internalOptions)
+      /**
+       * under development
+       */
+      case termTypes.CIRCLE:
+      case termTypes.DISTANCE:
+      case termTypes.FILL:
+      case termTypes.GEOJSON:
+      case termTypes.TO_GEOJSON:
+      case termTypes.GET_INTERSECTING:
+      case termTypes.GET_NEAREST:
+      case termTypes.INCLUDES:
+      case termTypes.INTERSECTS:
+      case termTypes.LINE:
+      case termTypes.POINT:
+      case termTypes.POLYGON:
+      case termTypes.POLYGON_SUB:
+        throw new Error(`illegal query ${reverseProtodef.Term.TermType[termType]}`)
+      /**
+       * illegal command
+       */
       case termTypes.INNER_JOIN:
-        throw new Error('illegal command [innerJoin]')
+      case termTypes.OUTER_JOIN:
+      case termTypes.DB_CREATE:
+      case termTypes.DB_DROP:
+      case termTypes.DB_LIST:
+      case termTypes.TABLE_CREATE:
+      case termTypes.TABLE_DROP:
+      case termTypes.TABLE_LIST:
+      case termTypes.CONFIG:
+      case termTypes.REBALANCE:
+      case termTypes.RECONFIGURE:
+      case termTypes.STATUS:
+      case termTypes.WAIT:
+        throw new Error(`illegal query ${reverseProtodef.Term.TermType[termType]}`)
       default:
-        throw new Error('unknown term')
+        throw new Error('Unknown query')
     }
   }
 
+  /**
+   * Selecting data
+   */
   db (args, options) {
     return r.db(this.dbName)
   }
@@ -267,6 +315,21 @@ class Query {
     let db = this.evaluate(args[0], options)
     let tableName = args[1]
     return db.table(tableName)
+  }
+
+  get (args, options) {
+    let table = this.evaluate(args.shift(), options)
+    return table.get(...args)
+  }
+
+  getAll (args, index, options) {
+    let table = this.evaluate(args.shift(), options)
+    return table.getAll(...args, index)
+  }
+
+  between (args, optionalArgs, options) {
+    let table = this.evaluate(args.shift(), options)
+    return table.between(...args, optionalArgs)
   }
 
   filter (args, options) {
@@ -280,16 +343,46 @@ class Query {
     return sequence.filter(predicate)
   }
 
-  reduce (args, options) {
-    let sequence = this.evaluate(args[0], options)
-    let predicate = this.evaluate(args[1], options)
-    return sequence.reduce(predicate)
+  /**
+   * Writing data
+   */
+  insert (args, options) {
+    let table = this.evaluate(args.shift(), options)
+    return table.insert(...args)
   }
 
+  update (args, options) {
+    let table = this.evaluate(args.shift(), options)
+    return table.update(...args)
+  }
+
+  replace (args, options) {
+    let table = this.evaluate(args.shift(), options)
+    return table.replace(...args)
+  }
+
+  delete (args, options) {
+    let table = this.evaluate(args.shift(), options)
+    return table.delete()
+  }
+
+  sync (args, options) {
+    return this.evaluate(args.shift(), options).sync()
+  }
+
+
+  /**
+   * Transformations
+   */
   map (args, options) {
     let sequence = this.evaluate(args[0], options)
     let predicate = this.evaluate(args[1], options)
     return sequence.map(predicate)
+  }
+
+  withFields (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.withFields(...args)
   }
 
   concatMap (args, options) {
@@ -303,6 +396,232 @@ class Query {
     return sequence.orderBy(...args)
   }
 
+  skip (args, options) {
+    let var1 = this.evaluate(args.shift(), options)
+    return var1.skip(...args)
+  }
+
+  limit (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.limit(...args)
+  }
+
+  slice (args, options) {
+    let var1 = this.evaluate(args.shift(), options)
+    return var1.slice(...args)
+  }
+
+  nth (args, options) {
+    let var1 = this.evaluate(args.shift(), options)
+    return var1.nth(...args)
+  }
+
+  offsetsOf (args, options) {
+    let var1 = this.evaluate(args.shift(), options)
+    return var1.offsetsOf(...args)
+  }
+
+  isEmpty (args, options) {
+    let var1 = this.evaluate(args.shift(), options)
+    return var1.isEmpty()
+  }
+
+  union (args, options) {
+    let var1 = this.evaluate(args.shift(), options)
+    let var2s = args.map(arg => this.evaluate(arg, options))
+    return var1.union(...var2s)
+  }
+
+  sample (args, options) {
+    let var1 = this.evaluate(args.shift(), options)
+    return var1.sample(...args)
+  }
+
+  /**
+   * Aggregation
+   */
+  group (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.group(...args)
+  }
+
+  ungroup (args, options) {
+    let grouped_stream = this.evaluate(args.shift(), options)
+    return grouped_stream.ungroup()
+  }
+
+  reduce (args, options) {
+    let sequence = this.evaluate(args[0], options)
+    let predicate = this.evaluate(args[1], options)
+    return sequence.reduce(predicate)
+  }
+
+  count (args, options) {
+    let sequence = this.evaluate(args[0], options)
+    return sequence.count()
+  }
+
+  sum (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.sum()
+  }
+
+  avg (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.avg()
+  }
+
+  min (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.min()
+  }
+
+  max (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.max()
+  }
+
+  distinct (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.distinct()
+  }
+
+  contains (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.contains(...args)
+  }
+
+  /**
+   * Document manipulation
+   */
+  row (args, options) {
+    return this[`${this.fnArgs[options]}`]
+  }
+
+  pluck (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.pluck(...args)
+  }
+
+  without (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.without(...args)
+  }
+
+  merge (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.merge(...args)
+  }
+
+  append (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.append(...args)
+  }
+
+  prepend (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.prepend(...args)
+  }
+
+  difference (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.difference(this.evaluate(args.shift(), options))
+  }
+
+  setInsert (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.setInsert(...args)
+  }
+
+  setUnion (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.setUnion(this.evaluate(args.shift(), options))
+  }
+
+  setIntersection (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.setIntersection(this.evaluate(args.shift(), options))
+  }
+
+  setDifference (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.setDifference(this.evaluate(args.shift(), options))
+  }
+
+  bracket (args, options) {
+    let sequence = this.evaluate(args[0], options)
+    return sequence(args[1])
+  }
+
+  getField (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.getField(...args)
+  }
+
+  hasFields (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.hasFields(this.evaluate(args.shift(), options))
+  }
+
+  insertAt (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.insertAt(...args)
+  }
+
+  spliceAt (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.spliceAt(args.shift(), this.evaluate(args.shift(), options))
+  }
+
+  deleteAt (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.deleteAt(...args)
+  }
+
+  changeAt (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.changeAt(...args)
+  }
+
+  keys (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.keys()
+  }
+
+  literal (args, options) {
+    return r.literal(args)
+  }
+
+  object (args, options) {
+    return r.object(...args)
+  }
+
+  /**
+   * String manipulation
+   */
+  match (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.match(...args)
+  }
+
+  split (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.split(...args)
+  }
+
+  upcase (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.upcase(...args)
+  }
+
+  downcase (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.downcase(...args)
+  }
+
+  /**
+   * Math and logic
+   */
   add (args, options) {
     let var1 = this.evaluate(args[0], options)
     let var2 = this.evaluate(args[1], options)
@@ -333,66 +652,6 @@ class Query {
     return var1.mod(var2)
   }
 
-  expr (args, options) {
-    return r.expr(args, options)
-  }
-
-  count (args, options) {
-    let sequence = this.evaluate(args[0], options)
-    return sequence.count()
-  }
-
-  func (args, options) {
-    this.fnId++
-    this.fnArgs[this.fnId] = args[0][1].map((arg) => `var_${arg}`)
-    this.funcBody = args[1]
-
-    let vars = ''
-    this.fnArgs[this.fnId].forEach(arg => {
-      vars += `this.${arg} = ${arg};`
-    })
-
-    return new Function(
-      this.fnArgs[this.fnId].join(','),
-      `
-        ${vars};
-        var fnId = this.fnId;
-        return this.evaluate(this.funcBody, fnId);
-      `
-    ).bind(this)
-  }
-
-  funCall (args, options) {
-    let sequence = this.evaluate(args[1], options)
-    return sequence.do(this.evaluate(args[0]))
-  }
-
-  makeArray (args, options) {
-    args = args.map(arg => {
-      if (arg[0] === 2 && Array.isArray(arg[1])) {
-        return this.evaluate(arg, options)
-      } else {
-        return arg
-      }
-    })
-    return r(args, options)
-  }
-
-  bracket (args, options) {
-    let sequence = this.evaluate(args[0], options)
-    return sequence(args[1])
-  }
-
-  varId (args, options) {
-    return this[`var_${args}`]
-  }
-
-  withFields (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.withFields(...args)
-  }
-
-  // Math and logic
   and (args, options) {
     let var1 = this.evaluate(args.shift(), options)
     return var1.and(...args)
@@ -442,8 +701,9 @@ class Query {
     return r.random(...args)
   }
 
-  // Dates and times
-
+  /**
+   * Dates and times
+   */
   now () {
     return r.now()
   }
@@ -537,249 +797,9 @@ class Query {
     return var1.toEpochTime()
   }
 
-  skip (args, options) {
-    let var1 = this.evaluate(args.shift(), options)
-    return var1.skip(...args)
-  }
-
-  limit (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.limit(...args)
-  }
-
-  slice (args, options) {
-    let var1 = this.evaluate(args.shift(), options)
-    return var1.slice(...args)
-  }
-
-  nth (args, options) {
-    let var1 = this.evaluate(args.shift(), options)
-    return var1.nth(...args)
-  }
-
-  offsetsOf (args, options) {
-    let var1 = this.evaluate(args.shift(), options)
-    return var1.offsetsOf(...args)
-  }
-
-  isEmpty (args, options) {
-    let var1 = this.evaluate(args.shift(), options)
-    return var1.isEmpty()
-  }
-
-  union (args, options) {
-    let var1 = this.evaluate(args.shift(), options)
-    let var2s = args.map(arg => this.evaluate(arg, options))
-    return var1.union(...var2s)
-  }
-
-  sample (args, options) {
-    let var1 = this.evaluate(args.shift(), options)
-    return var1.sample(...args)
-  }
-
-  group (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.group(...args)
-  }
-
-  ungroup (args, options) {
-    let grouped_stream = this.evaluate(args.shift(), options)
-    return grouped_stream.ungroup()
-  }
-
-  sum (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.sum()
-  }
-
-  avg (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.avg()
-  }
-
-  min (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.min()
-  }
-
-  max (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.max()
-  }
-
-  distinct (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.distinct()
-  }
-
-  contains (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.contains(...args)
-  }
-
-  info (args, options) {
-    let any = this.evaluate(args.shift(), options)
-    return any.info()
-  }
-
-  row (args, options) {
-    return this[`${this.fnArgs[options]}`]
-  }
-
-  pluck (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.pluck(...args)
-  }
-
-  without (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.without(...args)
-  }
-
-  merge (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.merge(...args)
-  }
-
-  append (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.append(...args)
-  }
-
-  prepend (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.prepend(...args)
-  }
-
-  difference (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.difference(this.evaluate(args.shift(), options))
-  }
-
-  setInsert (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.setInsert(...args)
-  }
-
-  setUnion (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.setUnion(this.evaluate(args.shift(), options))
-  }
-
-  setIntersection (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.setIntersection(this.evaluate(args.shift(), options))
-  }
-
-  setDifference (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.setDifference(this.evaluate(args.shift(), options))
-  }
-
-  getField (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.getField(...args)
-  }
-
-  hasFields (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.hasFields(this.evaluate(args.shift(), options))
-  }
-
-  insertAt (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.insertAt(...args)
-  }
-
-  spliceAt (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.spliceAt(args.shift(), this.evaluate(args.shift(), options))
-  }
-
-  deleteAt (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.deleteAt(...args)
-  }
-
-  changeAt (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.changeAt(...args)
-  }
-
-  keys (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.keys()
-  }
-
-  literal (args, options) {
-    return r.literal(args)
-  }
-
-  object (args, options) {
-    return r.object(...args)
-  }
-
-  insert (args, options) {
-    let table = this.evaluate(args.shift(), options)
-    return table.insert(...args)
-  }
-
-  update (args, options) {
-    let table = this.evaluate(args.shift(), options)
-    return table.update(...args)
-  }
-
-  delete (args, options) {
-    let table = this.evaluate(args.shift(), options)
-    return table.delete()
-  }
-
-  replace (args, options) {
-    let table = this.evaluate(args.shift(), options)
-    return table.replace(...args)
-  }
-
-  get (args, options) {
-    let table = this.evaluate(args.shift(), options)
-    return table.get(...args)
-  }
-
-  getAll (args, index, options) {
-    let table = this.evaluate(args.shift(), options)
-    return table.getAll(...args, index)
-  }
-
-  between (args, optionalArgs, options) {
-    let table = this.evaluate(args.shift(), options)
-    return table.between(...args, optionalArgs)
-  }
-
-  coerceTo (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.coerceTo(...args)
-  }
-
-  match (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.match(...args)
-  }
-
-  split (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.split(...args)
-  }
-
-  upcase (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.upcase(...args)
-  }
-
-  downcase (args, options) {
-    let sequence = this.evaluate(args.shift(), options)
-    return sequence.downcase(...args)
-  }
-
+  /**
+   * Control structures
+   */
   args (args, options) {
     return r.args(args[0][1])
   }
@@ -792,6 +812,12 @@ class Query {
     )
   }
 
+  foreach (args, options) {
+    let sequence = this.evaluate(args[0], options)
+    let predicate = this.evaluate(args[1], options)
+    return sequence.forEach(predicate)
+  }
+
   range (args, options) {
     return r.range(args.shift())
   }
@@ -802,6 +828,20 @@ class Query {
 
   default (args, options) {
     return this.evaluate(args.shift(), options).default(args.shift())
+  }
+
+  expr (args, options) {
+    return r.expr(args, options)
+  }
+
+  info (args, options) {
+    let any = this.evaluate(args.shift(), options)
+    return any.info()
+  }
+
+  coerceTo (args, options) {
+    let sequence = this.evaluate(args.shift(), options)
+    return sequence.coerceTo(...args)
   }
 
   typeOf (args, options) {
@@ -824,10 +864,52 @@ class Query {
     return r.uuid()
   }
 
-  foreach (args, options) {
-    let sequence = this.evaluate(args[0], options)
-    let predicate = this.evaluate(args[1], options)
-    return sequence.forEach(predicate)
+  /**
+   * Utils
+   */
+
+  func (args, options) {
+    this.fnId++
+    this.fnArgs[this.fnId] = args[0][1].map((arg) => `var_${arg}`)
+    this.funcBody = args[1]
+
+    let vars = ''
+    this.fnArgs[this.fnId].forEach(arg => {
+      vars += `this.${arg} = ${arg};`
+    })
+
+    return new Function(
+      this.fnArgs[this.fnId].join(','),
+      `
+        ${vars};
+        var fnId = this.fnId;
+        return this.evaluate(this.funcBody, fnId);
+      `
+    ).bind(this)
+  }
+
+  funCall (args, options) {
+    let sequence = this.evaluate(args[1], options)
+    return sequence.do(this.evaluate(args[0]))
+  }
+
+  makeArray (args, options) {
+    args = args.map(arg => {
+      if (arg[0] === 2 && Array.isArray(arg[1])) {
+        return this.evaluate(arg, options)
+      } else {
+        return arg
+      }
+    })
+    return r(args, options)
+  }
+
+  varId (args, options) {
+    return this[`var_${args}`]
+  }
+
+  zip (args, options) {
+    return this.evaluate(args.shift(), options).zip()
   }
 
 }

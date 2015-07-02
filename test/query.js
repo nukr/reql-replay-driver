@@ -13,12 +13,6 @@ chai.use(chaiAsPromised)
 let debug = Debug('reql:test')
 let seqTable = r.db(config.rethinkdb.db).table('sequence')
 
-let sleep = (t) => {
-  return new Promise((resolve, reject) => {
-    t > 3000 ? reject('time too big') : setTimeout(resolve, t)
-  })
-}
-
 before(() => {
   Query.options(config.rethinkdb)
 })
@@ -100,19 +94,28 @@ describe('selecting data', () => {
 
 describe('joins', () => {
   it('innerJoin', (done) => {
-    co(function * () {
-      done()
-    }).catch(done)
+    let query = new Query(r.db(config.rethinkdb.db).table('sequence').innerJoin(r.db(config.rethinkdb.db).table('test')).build())
+    let fn = () => {
+      query.run()
+    }
+    expect(fn).to.throw(Error)
+    done()
   })
-  it('outerJson', (done) => {
-    co(function * () {
-      done()
-    }).catch(done)
+  it('outerJoin', (done) => {
+    let query = new Query(r.db(config.rethinkdb.db).table('sequence').outerJoin(r.db(config.rethinkdb.db).table('test')).build())
+    let fn = () => {
+      query.run()
+    }
+    expect(fn).to.throw(Error)
+    done()
   })
-  it('eqJson', (done) => {
-    co(function * () {
-      done()
-    }).catch(done)
+  it('eqJoin', (done) => {
+    let query = new Query(r.db(config.rethinkdb.db).table('sequence').eqJoin('id', r.db(config.rethinkdb.db).table('sequence')).build())
+    let fn = () => {
+      query.run()
+    }
+    expect(fn).to.throw(Error)
+    done()
   })
   it('zip', (done) => {
     co(function * () {
@@ -1136,23 +1139,21 @@ describe('misc', () => {
 })
 
 describe('can not access function', () => {
-  it('dbCreate', () => {
+  it('dbCreate', (done) => {
     let query = new Query(r.dbCreate('qq123123').build(), config.rethinkdb.db)
-    // return query.run().should.be.rejectedWith(Error)
-    return expect(query.run()).to.eventually.be.rejectedWith(Error)
+    let fn = () => {
+      query.run()
+    }
+    expect(fn).to.throw(Error, 'illegal query DB_CREATE')
+    done()
   })
-})
 
-describe('joins', () => {
   it('innerJoin', (done) => {
-    async () => {
-      done()
-    }().catch(done)
-  })
-  it('outerJoin', (done) => {
-    co(function * () {
-      done()
-    }).catch(done)
+    let query = new Query(r.db('hihi').table('hihi').innerJoin(r.db('qq').table('qq')).build(), config.rethinkdb.db)
+    let fn = () => {
+      query.run()
+    }
+    expect(fn).to.throw(Error, 'illegal query INNER_JOIN')
+    done()
   })
 })
-
