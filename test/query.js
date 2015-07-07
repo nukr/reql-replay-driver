@@ -4,7 +4,6 @@ import chaiAsPromised from 'chai-as-promised'
 import Query from '../src/query'
 import r from 'rethinkdb'
 import co from 'co'
-import fs from 'fs'
 import config from '../config'
 import Debug from 'debug'
 

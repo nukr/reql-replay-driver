@@ -2,7 +2,6 @@ import rethinkdbdash from 'rethinkdbdash'
 import protodef from './protodef'
 import reverseProtodef from './reverse-protodef'
 import Debug from 'debug'
-import config from '../config.js'
 
 let debug = Debug('reql:query')
 let termTypes = protodef.Term.TermType

@@ -1,8 +1,8 @@
 {
   "name": "reql-replay-driver",
-  "version": "0.0.1",
+  "version": "0.0.2-beta",
   "description": "",
-  "main": "parser.js",
+  "main": "index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nukr/reql-replay-driver.git"
@@ -35,10 +35,10 @@
     "watch": "^0.16.0"
   },
   "scripts": {
-    "clean": "rimraf dist/*",
+    "clean": "rimraf lib/*",
     "coverage": "babel-node --stage 0 node_modules/.bin/isparta cover --report text --report html node_modules/.bin/_mocha -- --reporter spec",
     "nodemon": "nodemon --exec 'babel-node' ./src/parser.js",
-    "prepublish": "babel --watch -d lib/ src/",
+    "prepublish": "npm run clean && babel -d lib/ src/",
     "test": "babel-node --stage 0 ./utils/generateFixtures.js && npm run test:watch",
     "test:watch": "mocha --require utils/mochaBabel.js -w --timeout 15000"
   }
